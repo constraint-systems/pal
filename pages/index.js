@@ -1,163 +1,82 @@
-import React, { useEffect, useRef, useState } from 'react';
-import Head from 'next/head';
-import { themes } from '../s/themes.js';
-import * as chroma from 'chroma-js';
+import React, { useEffect, useRef, useState } from 'react'
+import Head from 'next/head'
+import { themes } from '../s/theme_min.js'
+import { fragment_shader, vertex_shader } from '../shaders/shaders.js'
+import * as chroma from 'chroma-js'
 
-let vertex_shader = `attribute vec2 a_position;
-  attribute vec2 a_texCoord;
-  varying vec2 v_texCoord;
-  uniform vec2 u_resolution;
+let fs = 15
+let lh = 1.5
+let rlh = fs * lh
 
-  void main() {
-    vec2 clipSpace = (a_position / u_resolution) * 2.0 - 1.0; // convert the rectangle from pixels to clipspace
-    gl_Position = vec4(clipSpace * vec2(1, -1), 0, 1);
-    v_texCoord = a_texCoord; // pass the texCoord to the fragment shader
-  }`;
-
-let fragment_shader = `precision mediump float;
-  uniform sampler2D u_image;
-  uniform vec2 u_thresh;
-  uniform vec3 u_palette[8];
-  varying vec2 v_texCoord;
-
-  vec3 rgb2hsv(vec3 c) {
-    vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
-    vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
-    vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
-
-    float d = q.x - min(q.w, q.y);
-    float e = 1.0e-10;
-    return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
-  }
-
-  void main() {
-    vec4 color = texture2D(u_image, v_texCoord);
-
-    vec3 hsv = rgb2hsv(color.rgb);
-    float lum = dot(color.rgb, vec3(0.2125, 0.7154, 0.0721));
-
-    float bg = dot(color.rgb, u_palette[0]);
-    float fg = dot(color.rgb, u_palette[1]);
-
-    vec3 hued = vec3(1.0, 1.0, 1.0);
-    if (lum <= u_thresh[0]) {
-      if (bg <= fg) {
-        hued = u_palette[0];
-      } else {
-        hued = u_palette[1];
-      }
-    } else if (lum >= u_thresh[1]) {
-      if (bg <= fg) {
-        hued = u_palette[1];
-      } else {
-        hued = u_palette[0];
-      }
-    } else {
-      if (hsv[0] <= 0.0833) {
-        hued = u_palette[2];
-      } else if (hsv[0] <= 0.25) {
-        hued = u_palette[3];
-      } else if (hsv[0] <= 0.4166) {
-        hued = u_palette[4];
-      } else if (hsv[0] <= 0.5833) {
-        hued = u_palette[5];
-      } else if (hsv[0] <= 0.75) {
-        hued = u_palette[6];
-      } else if (hsv[0] <= 0.9166) {
-        hued = u_palette[7];
-      } else {
-        hued = u_palette[2];
-      }
-    }
-    gl_FragColor = vec4(hued, 1.0);
-  }`;
-
-let fs = 15;
-let lh = 1.5;
-let rlh = fs * lh;
-
-let picked_keys = [
-  'background_color',
-  'foreground_color',
-  'color_02',
-  'color_03',
-  'color_04',
-  'color_05',
-  'color_06',
-  'color_07',
-].map(k => k.toUpperCase());
-
-let hue_keys = [
-  'color_02',
-  'color_03',
-  'color_04',
-  'color_05',
-  'color_06',
-  'color_07',
-].map(k => k.toUpperCase());
+let theme_names = themes.map(t => t.name)
 
 const Home = ({ pick_serve }) => {
-  let [pick, setPick] = useState(pick_serve);
-  let [hue_shift, setHueShift] = useState(0);
-  let keymap_ref = useRef({});
-  let cimg_ref = useRef(null);
-  let c_ref = useRef(null);
-  let program_ref = useRef({});
-  let [load, setLoad] = useState(false);
-  let [lthresh, setLthresh] = useState(0.2);
-  let [hthresh, setHthresh] = useState(0.8);
+  let [pick, setPick] = useState(0)
+  let [hue_shift, setHueShift] = useState(0)
+  let keymap_ref = useRef({})
+  let cimg_ref = useRef(null)
+  let c_ref = useRef(null)
+  let program_ref = useRef({})
+  let [load, setLoad] = useState(false)
+  let [lthresh, setLthresh] = useState(0.2)
+  let [hthresh, setHthresh] = useState(0.8)
 
   useEffect(() => {
-    let img = new Image();
+    let img = new Image()
     img.onload = () => {
-      setLoad(true);
+      setLoad(true)
 
-      let c = c_ref.current;
-      c.width = img.width;
-      c.height = img.height;
+      let c = c_ref.current
+      c.width = img.width
+      c.height = img.height
 
-      let ctx = c.getContext('webgl');
+      let ctx = c.getContext('webgl')
 
       function compileShader(shaderSource, shaderType) {
-        let shader = ctx.createShader(shaderType);
-        ctx.shaderSource(shader, shaderSource);
-        ctx.compileShader(shader);
-        return shader;
+        let shader = ctx.createShader(shaderType)
+        ctx.shaderSource(shader, shaderSource)
+        ctx.compileShader(shader)
+        return shader
       }
 
-      let program = ctx.createProgram();
-      program_ref.current = program;
-      ctx.attachShader(
-        program,
-        compileShader(vertex_shader, ctx.VERTEX_SHADER)
-      );
+      let program = ctx.createProgram()
+      program_ref.current = program
+      ctx.attachShader(program, compileShader(vertex_shader, ctx.VERTEX_SHADER))
       ctx.attachShader(
         program,
         compileShader(fragment_shader, ctx.FRAGMENT_SHADER)
-      );
-      ctx.linkProgram(program);
-      ctx.useProgram(program);
+      )
+      ctx.linkProgram(program)
+      ctx.useProgram(program)
 
-      let thresh_location = ctx.getUniformLocation(program, 'u_thresh');
-      ctx.uniform2f(thresh_location, lthresh, hthresh);
+      let thresh_location = ctx.getUniformLocation(program, 'u_thresh')
+      ctx.uniform2f(thresh_location, lthresh, hthresh)
 
-      let palette_location = ctx.getUniformLocation(program, 'u_palette');
-      let test = themes[pick];
-      let hues = picked_keys
-        .map(k =>
-          chroma(test[k])
-            .gl()
-            .slice(0, 3)
-        )
-        .flat();
-      ctx.uniform3fv(palette_location, new Float32Array(hues));
+      let palette_location = ctx.getUniformLocation(program, 'u_palette')
+      let picked = themes[pick]
+      let hues = picked.hues.map(k =>
+        chroma(k)
+          .gl()
+          .slice(0, 3)
+      )
+      let arranged = [
+        chroma(picked.bg)
+          .gl()
+          .slice(0, 3),
+        chroma(picked.fg)
+          .gl()
+          .slice(0, 3),
+        ...hues,
+      ]
 
-      let resolution_location = ctx.getUniformLocation(program, 'u_resolution');
-      ctx.uniform2f(resolution_location, c.width, c.height);
+      ctx.uniform3fv(palette_location, new Float32Array(arranged.flat()))
 
-      let position_location = ctx.getAttribLocation(program, 'a_position');
-      let buffer = ctx.createBuffer();
-      ctx.bindBuffer(ctx.ARRAY_BUFFER, buffer);
+      let resolution_location = ctx.getUniformLocation(program, 'u_resolution')
+      ctx.uniform2f(resolution_location, c.width, c.height)
+
+      let position_location = ctx.getAttribLocation(program, 'a_position')
+      let buffer = ctx.createBuffer()
+      ctx.bindBuffer(ctx.ARRAY_BUFFER, buffer)
       ctx.bufferData(
         ctx.ARRAY_BUFFER,
         new Float32Array([
@@ -175,13 +94,13 @@ const Home = ({ pick_serve }) => {
           img.height,
         ]),
         ctx.STATIC_DRAW
-      );
-      ctx.enableVertexAttribArray(position_location);
-      ctx.vertexAttribPointer(position_location, 2, ctx.FLOAT, false, 0, 0);
+      )
+      ctx.enableVertexAttribArray(position_location)
+      ctx.vertexAttribPointer(position_location, 2, ctx.FLOAT, false, 0, 0)
 
-      let tex_coord_location = ctx.getAttribLocation(program, 'a_texCoord');
-      let tex_coord_buffer = ctx.createBuffer();
-      ctx.bindBuffer(ctx.ARRAY_BUFFER, tex_coord_buffer);
+      let tex_coord_location = ctx.getAttribLocation(program, 'a_texCoord')
+      let tex_coord_buffer = ctx.createBuffer()
+      ctx.bindBuffer(ctx.ARRAY_BUFFER, tex_coord_buffer)
       ctx.bufferData(
         ctx.ARRAY_BUFFER,
         new Float32Array([
@@ -199,18 +118,18 @@ const Home = ({ pick_serve }) => {
           1.0,
         ]),
         ctx.STATIC_DRAW
-      );
-      ctx.enableVertexAttribArray(tex_coord_location);
-      ctx.vertexAttribPointer(tex_coord_location, 2, ctx.FLOAT, false, 0, 0);
+      )
+      ctx.enableVertexAttribArray(tex_coord_location)
+      ctx.vertexAttribPointer(tex_coord_location, 2, ctx.FLOAT, false, 0, 0)
 
-      let texture = ctx.createTexture();
-      ctx.bindTexture(ctx.TEXTURE_2D, texture);
-      ctx.bindTexture(ctx.TEXTURE_2D, texture);
+      let texture = ctx.createTexture()
+      ctx.bindTexture(ctx.TEXTURE_2D, texture)
+      ctx.bindTexture(ctx.TEXTURE_2D, texture)
 
-      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE);
-      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE);
-      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST);
-      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST);
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_S, ctx.CLAMP_TO_EDGE)
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_WRAP_T, ctx.CLAMP_TO_EDGE)
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MIN_FILTER, ctx.NEAREST)
+      ctx.texParameteri(ctx.TEXTURE_2D, ctx.TEXTURE_MAG_FILTER, ctx.NEAREST)
       ctx.texImage2D(
         ctx.TEXTURE_2D,
         0,
@@ -218,127 +137,142 @@ const Home = ({ pick_serve }) => {
         ctx.RGBA,
         ctx.UNSIGNED_BYTE,
         img
-      );
+      )
 
-      ctx.drawArrays(ctx.TRIANGLES, 0, 6);
-    };
-    img.src = '/wick.jpg';
-  }, []);
+      ctx.drawArrays(ctx.TRIANGLES, 0, 6)
+    }
+    img.src = '/scruggs.jpg'
+  }, [])
+
+  function selectTheme(name) {
+    let index = theme_names.indexOf(name)
+    setPick(index)
+  }
 
   function keyAction(e) {
-    let key = e.key.toLowerCase();
-    let repeat = e.repeat;
+    let key = e.key.toLowerCase()
+    let repeat = e.repeat
+    let keymap = keymap_ref.current
 
-    if (key === 'j') {
+    if (keymap['j']) {
       setPick(prevState => {
-        let nstate = prevState + 1;
-        if (nstate === themes.length) nstate = 0;
-        return nstate;
-      });
+        let nstate = prevState + 1
+        if (nstate === themes.length) nstate = 0
+        return nstate
+      })
     }
-    if (key === 'k') {
+    if (keymap['k']) {
       setPick(prevState => {
-        let nstate = prevState - 1;
-        if (nstate < 0) nstate = themes.length - 1;
-        return nstate;
-      });
+        let nstate = prevState - 1
+        if (nstate < 0) nstate = themes.length - 1
+        return nstate
+      })
     }
-    if (key === 'h') {
+    if (keymap['h']) {
       setHueShift(prevState => {
-        let n = prevState - 1;
-        if (n < 0) n = hue_keys.length - 1;
-        return n;
-      });
+        let n = prevState - 1
+        if (n < 0) n = themes[0].hues.length - 1
+        return n
+      })
     }
-    if (key === 'l') {
+    if (keymap['l']) {
       setHueShift(prevState => {
-        return (prevState + 1) % hue_keys.length;
-      });
+        return (prevState + 1) % themes[0].hues.length
+      })
     }
-    if (key === 'a') {
+    if (keymap['a']) {
       setLthresh(prevState => {
-        return Math.max(0, prevState - 0.0125);
-      });
+        return Math.max(0, prevState - 0.0125)
+      })
     }
-    if (key === 's') {
+    if (keymap['s']) {
       setLthresh(prevState => {
-        return Math.min(1, prevState + 0.0125);
-      });
+        return Math.min(hthresh, prevState + 0.0125)
+      })
     }
-    if (key === 'd') {
+    if (keymap['d']) {
       setHthresh(prevState => {
-        return Math.max(0, prevState - 0.0125);
-      });
+        return Math.max(lthresh, prevState - 0.0125)
+      })
     }
-    if (key === 'f') {
+    if (keymap['f']) {
       setHthresh(prevState => {
-        return Math.min(1, prevState + 0.0125);
-      });
+        return Math.min(1, prevState + 0.0125)
+      })
     }
   }
 
   useEffect(() => {
     if (load) {
-      let c = c_ref.current;
-      let ctx = c.getContext('webgl');
-      let program = program_ref.current;
+      let c = c_ref.current
+      let ctx = c.getContext('webgl')
+      let program = program_ref.current
 
-      let thresh_location = ctx.getUniformLocation(program, 'u_thresh');
-      ctx.uniform2f(thresh_location, lthresh, hthresh);
+      let thresh_location = ctx.getUniformLocation(program, 'u_thresh')
+      ctx.uniform2f(thresh_location, lthresh, hthresh)
 
-      let test = themes[pick];
-      let hues = picked_keys.map(k =>
-        chroma(test[k])
+      let picked = themes[pick]
+      let hues = picked.hues.map(k =>
+        chroma(k)
           .gl()
           .slice(0, 3)
-      );
+      )
 
-      let bgfg = hues.slice(0, 2);
-      let hues_a = hues.slice(2, 2 + hue_shift);
-      let hues_b = hues.slice(2 + hue_shift);
-      let arranged = [...bgfg, ...hues_b, ...hues_a];
+      let hues_a = hues.slice(0, hue_shift)
+      let hues_b = hues.slice(hue_shift)
+      let arranged = [
+        chroma(picked.bg)
+          .gl()
+          .slice(0, 3),
+        chroma(picked.fg)
+          .gl()
+          .slice(0, 3),
+        ...hues_b,
+        ...hues_a,
+      ]
 
-      let palette_location = ctx.getUniformLocation(program, 'u_palette');
-      ctx.uniform3fv(palette_location, new Float32Array(arranged.flat()));
+      let palette_location = ctx.getUniformLocation(program, 'u_palette')
+      ctx.uniform3fv(palette_location, new Float32Array(arranged.flat()))
 
-      ctx.drawArrays(ctx.TRIANGLES, 0, 6);
+      ctx.drawArrays(ctx.TRIANGLES, 0, 6)
     }
-  }, [lthresh, hthresh, pick, hue_shift]);
+  }, [lthresh, hthresh, pick, hue_shift])
 
   function downHandler(e) {
-    let key = e.key.toLowerCase();
-    keymap_ref.current[key] = true;
-    keyAction(e);
+    let key = e.key.toLowerCase()
+    keymap_ref.current[key] = true
+    keyAction(e)
   }
 
   function upHandler(e) {
-    let key = e.key.toLowerCase();
-    keymap_ref.current[key] = false;
+    let key = e.key.toLowerCase()
+    keymap_ref.current[key] = false
   }
 
   useEffect(() => {
-    window.addEventListener('keydown', downHandler);
-    window.addEventListener('keyup', upHandler);
+    window.addEventListener('keydown', downHandler)
+    window.addEventListener('keyup', upHandler)
     return () => {
-      window.removeEventListener('keydown', downHandler);
-      window.removeEventListener('keyup', upHandler);
-    };
-  }, []);
+      window.removeEventListener('keydown', downHandler)
+      window.removeEventListener('keyup', upHandler)
+    }
+  }, [lthresh, hthresh])
 
-  let sorted = [...themes.slice(pick), ...themes.slice(0, pick)];
-  let fg = themes[pick].FOREGROUND_COLOR;
-  let bg = themes[pick].BACKGROUND_COLOR;
+  let picked = themes[pick]
+  let fg = picked.fg
+  let bg = picked.bg
+  let sorted = [...themes.slice(pick), ...themes.slice(0, pick)]
   return (
     <div>
       <Head>
-        <title>Picterm</title>
+        <title>Pal</title>
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <div
         style={{
           minHeight: '100%',
-          background: themes[pick].BACKGROUND_COLOR,
+          background: bg,
         }}
       >
         <div style={{ outline: `solid 1px ${fg}`, color: fg, display: 'flex' }}>
@@ -399,8 +333,8 @@ const Home = ({ pick_serve }) => {
         >
           <div
             style={{
-              border: `solid 1px ${themes[pick].FOREGROUND_COLOR}`,
-              background: themes[pick].FOREGROUND_COLOR,
+              border: `solid 1px ${fg}`,
+              background: fg,
             }}
           >
             <canvas ref={c_ref} />
@@ -517,7 +451,7 @@ const Home = ({ pick_serve }) => {
         </div>
         <div
           style={{
-            color: themes[pick].FOREGROUND_COLOR,
+            color: fg,
             paddingLeft: '1ch',
             display: 'none',
           }}
@@ -533,8 +467,8 @@ const Home = ({ pick_serve }) => {
             </span>
             <span
               style={{
-                background: themes[pick].FOREGROUND_COLOR,
-                color: themes[pick].BACKGROUND_COLOR,
+                background: fg,
+                color: fg,
                 display: 'inline-block',
               }}
             >
@@ -544,8 +478,8 @@ const Home = ({ pick_serve }) => {
             {` `}
             <span
               style={{
-                background: themes[pick].FOREGROUND_COLOR,
-                color: themes[pick].BACKGROUND_COLOR,
+                background: fg,
+                color: bg,
                 display: 'inline-block',
               }}
             >
@@ -554,8 +488,8 @@ const Home = ({ pick_serve }) => {
             f h
             <span
               style={{
-                background: themes[pick].FOREGROUND_COLOR,
-                color: themes[pick].BACKGROUND_COLOR,
+                background: fg,
+                color: bg,
                 display: 'inline-block',
               }}
             >
@@ -574,38 +508,36 @@ const Home = ({ pick_serve }) => {
           <div style={{ color: fg }}>theme</div>
           {sorted.map((t, i) => (
             <div
-              key={t.PROFILE_NAME}
+              key={t.name}
               style={{
                 display: 'flex',
                 position: 'relative',
-                color: themes[pick].FOREGROUND_COLOR,
-                outline: i === 0 ? `solid 1px ${t.FOREGROUND_COLOR}` : 'none',
+                color: fg,
+                outline: i === 0 ? `solid 1px ${fg}` : 'none',
                 zIndex: i === 0 ? 2 : 1,
+                cursor: 'default',
+              }}
+              onClick={() => {
+                selectTheme(t.name)
               }}
             >
               <div style={{ width: '12ch', display: 'flex' }}>
-                {hue_keys.map(k => (
+                {t.hues.map(k => (
                   <div
-                    style={{ background: t[k], width: '2ch', height: '1.5rem' }}
+                    style={{ background: k, width: '2ch', height: '1.5rem' }}
                   ></div>
                 ))}
               </div>
               <div style={{ display: 'flex', flexGrow: 1 }}>
                 <div
                   style={{
-                    background:
-                      i === 0 && false
-                        ? t.FOREGROUND_COLOR
-                        : t.BACKGROUND_COLOR,
-                    color:
-                      i === 0 && false
-                        ? t.BACKGROUND_COLOR
-                        : t.FOREGROUND_COLOR,
+                    background: i === 0 && false ? t.fg : t.bg,
+                    color: i === 0 && false ? t.bg : t.fg,
                     paddingLeft: '0.5ch',
                     paddingRight: '0.5ch',
                   }}
                 >
-                  {t['profile_name'.toUpperCase()]}
+                  {t.name}
                 </div>
               </div>
               {i === 0 ? (
@@ -653,13 +585,7 @@ const Home = ({ pick_serve }) => {
         }
       `}</style>
     </div>
-  );
-};
+  )
+}
 
-Home.getInitialProps = async function() {
-  return {
-    pick_serve: 0,
-  };
-};
-
-export default Home;
+export default Home

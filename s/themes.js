@@ -1,4 +1,4 @@
-export let themes = [
+module.exports = [
   {
     COLOR_01: '#000',
     COLOR_02: '#ff0000',
@@ -4108,4 +4108,4 @@ export let themes = [
     CURSOR_COLOR: '$FOREGROUND_COLOR',
     PROFILE_NAME: 'Zenburn',
   },
-];
+]
