@@ -10,27 +10,101 @@ let rlh = fs * lh
 
 let theme_names = themes.map(t => t.name)
 
+let Keycap = ({ k, fg, bg, clickKey }) => {
+  return (
+    <div
+      style={{
+        userSelect: 'none',
+        MozUserSelect: 'none',
+        background: fg,
+        color: bg,
+        paddingLeft: '0.5ch',
+        paddingRight: '0.5ch',
+        textDecoration: 'underline',
+      }}
+      onClick={() => {
+        clickKey(k)
+      }}
+    >
+      {k}
+    </div>
+  )
+}
+
 const Home = ({ pick_serve }) => {
   let [pick, setPick] = useState(0)
   let [hue_shift, setHueShift] = useState(0)
   let keymap_ref = useRef({})
-  let cimg_ref = useRef(null)
-  let c_ref = useRef(null)
+  let c_holder_ref = useRef(null)
   let program_ref = useRef({})
+  let container_ref = useRef({})
   let [load, setLoad] = useState(false)
   let [lthresh, setLthresh] = useState(0.2)
   let [hthresh, setHthresh] = useState(0.8)
 
-  useEffect(() => {
+  function clickKey(key) {
+    let km = keymap_ref.current
+    km[key] = true
+    keyAction({ key }, false)
+    setTimeout(() => {
+      km[key] = false
+    }, 0)
+  }
+
+  function initImage(src, first_load = false) {
     let img = new Image()
     img.onload = () => {
       setLoad(true)
 
-      let c = c_ref.current
+      let w = window.innerWidth - 18 * 1.5
+      let h = window.innerHeight - rlh
+
+      let iw = img.width
+      let ih = img.height
+
+      let wa = w / h
+      let ia = iw / ih
+
+      let resize_check = false
+      let rw, rh
+      if (ia >= wa) {
+        if (iw > w) {
+          resize_check = true
+          rw = w
+          rh = Math.round(w / ia)
+        }
+      } else {
+        if (ih > h) {
+          resize_check = true
+          rh = h
+          rw = Math.round(h * ia)
+        }
+      }
+
+      if (resize_check) {
+        let confirm_check = true
+        if (!first_load) {
+          confirm_check = confirm(
+            `The image you selected is larger (${iw}x${ih}) than the browser window.  Resize it to fit (${rw}x${rh})? Choose cancel to import it at full size.`
+          )
+        }
+        if (confirm_check) {
+          img.width = rw
+          img.height = rh
+        }
+      }
+
+      let c_holder = c_holder_ref.current
+      c_holder.innerHTML = ''
+
+      container_ref.current.style.minWidth = img.width + 18 + 'px'
+
+      let c = document.createElement('canvas')
       c.width = img.width
       c.height = img.height
+      c_holder.appendChild(c)
 
-      let ctx = c.getContext('webgl')
+      let ctx = c.getContext('webgl', { preserveDrawingBuffer: true })
 
       function compileShader(shaderSource, shaderType) {
         let shader = ctx.createShader(shaderType)
@@ -141,7 +215,11 @@ const Home = ({ pick_serve }) => {
 
       ctx.drawArrays(ctx.TRIANGLES, 0, 6)
     }
-    img.src = '/scruggs.jpg'
+    img.src = src
+  }
+
+  useEffect(() => {
+    initImage('scruggs.jpg', true)
   }, [])
 
   function selectTheme(name) {
@@ -153,6 +231,69 @@ const Home = ({ pick_serve }) => {
     let key = e.key.toLowerCase()
     let repeat = e.repeat
     let keymap = keymap_ref.current
+    if (key === 'o' && !repeat) {
+      let input = document.createElement('input')
+      input.setAttribute('type', 'file')
+      input.dispatchEvent(
+        new MouseEvent(`click`, {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+        })
+      )
+
+      function handleChange(e) {
+        for (const item of this.files) {
+          if (item.type.indexOf('image') < 0) {
+            continue
+          }
+          let src = URL.createObjectURL(item)
+          initImage(src)
+        }
+        this.removeEventListener('change', handleChange)
+      }
+      input.addEventListener('change', handleChange)
+    }
+    if (key === 'w' && !repeat) {
+      let link = document.createElement('a')
+
+      var revokeURL = function() {
+        let me = this
+        requestAnimationFrame(function() {
+          URL.revokeObjectURL(me.href)
+          me.href = null
+        })
+        this.removeEventListener('click', revokeURL)
+      }
+
+      c_holder_ref.current.childNodes[0].toBlob(function(blob) {
+        link.setAttribute(
+          'download',
+          `pal-${themes[pick].name
+            .replace(' ', '_')
+            .toLowerCase()}-l${lthresh
+            .toString()
+            .replace('0.', '')}-h${hthresh
+            .toString()
+            .replace('0.', '')}-s${hue_shift}-${new Date()
+            .toISOString()
+            .slice(0, -4)
+            .replace(/-/g, '')
+            .replace(/:/g, '')
+            .replace(/_/g, '')
+            .replace(/\./g, '')}Z.png`
+        )
+        link.setAttribute('href', URL.createObjectURL(blob))
+        link.addEventListener('click', revokeURL)
+        link.dispatchEvent(
+          new MouseEvent(`click`, {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+          })
+        )
+      })
+    }
 
     if (keymap['j']) {
       setPick(prevState => {
@@ -204,8 +345,8 @@ const Home = ({ pick_serve }) => {
 
   useEffect(() => {
     if (load) {
-      let c = c_ref.current
-      let ctx = c.getContext('webgl')
+      let c = c_holder_ref.current.childNodes[0]
+      let ctx = c.getContext('webgl', { preserveDrawingBuffer: true })
       let program = program_ref.current
 
       let thresh_location = ctx.getUniformLocation(program, 'u_thresh')
@@ -256,7 +397,7 @@ const Home = ({ pick_serve }) => {
       window.removeEventListener('keydown', downHandler)
       window.removeEventListener('keyup', upHandler)
     }
-  }, [lthresh, hthresh])
+  }, [lthresh, hthresh, pick])
 
   let picked = themes[pick]
   let fg = picked.fg
@@ -270,57 +411,43 @@ const Home = ({ pick_serve }) => {
       </Head>
 
       <div
+        ref={container_ref}
         style={{
           minHeight: '100%',
           background: bg,
         }}
       >
-        <div style={{ outline: `solid 1px ${fg}`, color: fg, display: 'flex' }}>
-          <div style={{ display: 'flex', marginRight: '1ch' }}>
-            <div
-              style={{
-                background: fg,
-                color: bg,
-                paddingLeft: '0.5ch',
-                paddingRight: '0.5ch',
-                marginRight: '0.5ch',
-              }}
-            >
-              o
-            </div>
-            <div>open file</div>
-          </div>
-          <div style={{ display: 'flex', marginRight: '1ch' }}>
-            <div
-              style={{
-                background: fg,
-                color: bg,
-                paddingLeft: '0.5ch',
-                paddingRight: '0.5ch',
-                marginLeft: '0.5ch',
-                marginRight: '0.5ch',
-              }}
-            >
-              w
-            </div>
-            <div>save png</div>
-          </div>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            outline: `solid 1px ${fg}`,
+            color: fg,
+          }}
+        >
           <div style={{ display: 'flex' }}>
-            <div
-              style={{
-                background: fg,
-                color: bg,
-                paddingLeft: '0.5ch',
-                paddingRight: '0.5ch',
-                marginLeft: '0.5ch',
-                marginRight: '0.5ch',
-              }}
-            >
-              ?
+            <div style={{ marginLeft: '1ch', marginRight: '1ch' }}>
+              <div>Pal</div>
             </div>
-            <div>toggle help</div>
+            <div style={{ display: 'flex', marginRight: '1ch' }}>
+              <Keycap k={'o'} fg={fg} bg={bg} clickKey={clickKey} />
+              <div style={{ marginLeft: '0.5ch' }}>open file</div>
+            </div>
+            <div style={{ display: 'flex', marginRight: '1ch' }}>
+              <Keycap k={'w'} fg={fg} bg={bg} clickKey={clickKey} />
+              <div style={{ marginLeft: '0.5ch' }}>save png</div>
+            </div>
+            <div style={{ display: 'flex' }}>
+              <Keycap k={'?'} fg={fg} bg={bg} clickKey={clickKey} />
+              <div style={{ marginLeft: '0.5ch' }}>toggle help</div>
+            </div>
           </div>
         </div>
+
+        <div style={{ color: fg }}>
+          Pal let's you apply a terminal color scheme to an image.
+        </div>
+
         <div
           style={{
             paddingLeft: '1ch',
@@ -336,9 +463,8 @@ const Home = ({ pick_serve }) => {
               border: `solid 1px ${fg}`,
               background: fg,
             }}
-          >
-            <canvas ref={c_ref} />
-          </div>
+            ref={c_holder_ref}
+          ></div>
         </div>
 
         <div
@@ -352,16 +478,7 @@ const Home = ({ pick_serve }) => {
           <div style={{ marginRight: '2ch' }}>
             <div style={{}}>lothresh</div>
             <div style={{ display: 'flex', outline: `solid 1px ${fg}` }}>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                a
-              </div>
+              <Keycap k={'a'} fg={fg} bg={bg} clickKey={clickKey} />
               <div
                 style={{
                   paddingLeft: '0.5ch',
@@ -370,31 +487,13 @@ const Home = ({ pick_serve }) => {
               >
                 {lthresh.toFixed(4)}
               </div>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                s
-              </div>
+              <Keycap k={'s'} fg={fg} bg={bg} clickKey={clickKey} />
             </div>
           </div>
           <div style={{ marginRight: '2ch' }}>
             <div>hithresh</div>
             <div style={{ display: 'flex', outline: `solid 1px ${fg}` }}>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                d
-              </div>
+              <Keycap k={'d'} fg={fg} bg={bg} clickKey={clickKey} />
               <div
                 style={{
                   paddingLeft: '0.5ch',
@@ -403,31 +502,13 @@ const Home = ({ pick_serve }) => {
               >
                 {hthresh.toFixed(4)}
               </div>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                f
-              </div>
+              <Keycap k={'f'} fg={fg} bg={bg} clickKey={clickKey} />
             </div>
           </div>
           <div>
             <div>shue</div>
             <div style={{ display: 'flex', outline: `solid 1px ${fg}` }}>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                h
-              </div>
+              <Keycap k={'h'} fg={fg} bg={bg} clickKey={clickKey} />
               <div
                 style={{
                   paddingLeft: '0.5ch',
@@ -436,74 +517,18 @@ const Home = ({ pick_serve }) => {
               >
                 {hue_shift}
               </div>
-              <div
-                style={{
-                  background: fg,
-                  color: bg,
-                  paddingLeft: '0.5ch',
-                  paddingRight: '0.5ch',
-                }}
-              >
-                l
-              </div>
+              <Keycap k={'l'} fg={fg} bg={bg} clickKey={clickKey} />
             </div>
-          </div>
-        </div>
-        <div
-          style={{
-            color: fg,
-            paddingLeft: '1ch',
-            display: 'none',
-          }}
-        >
-          <div>lothresh</div>
-          <div style={{ display: 'flex' }}>
-            <span
-              style={{
-                display: 'inline-block',
-              }}
-            >
-              a←
-            </span>
-            <span
-              style={{
-                background: fg,
-                color: fg,
-                display: 'inline-block',
-              }}
-            >
-              {lthresh.toFixed(4)}
-            </span>
-            <span style={{ display: 'inline-block' }}>→s</span>
-            {` `}
-            <span
-              style={{
-                background: fg,
-                color: bg,
-                display: 'inline-block',
-              }}
-            >
-              {hthresh.toFixed(4)}
-            </span>
-            f h
-            <span
-              style={{
-                background: fg,
-                color: bg,
-                display: 'inline-block',
-              }}
-            >
-              {hue_shift}
-            </span>
-            l
-          </div>
-          <div style={{ display: 'none' }}>
-            h↓j↑ {themes[pick].PROFILE_NAME}
           </div>
         </div>
 
         <div
-          style={{ display: 'block', paddingLeft: '1ch', paddingRight: '1ch' }}
+          style={{
+            display: 'block',
+            paddingLeft: '1ch',
+            paddingRight: '1ch',
+            paddingBottom: rlh / 2,
+          }}
         >
           <div style={{ color: fg }}>theme</div>
           {sorted.map((t, i) => (
@@ -541,15 +566,9 @@ const Home = ({ pick_serve }) => {
                 </div>
               </div>
               {i === 0 ? (
-                <div
-                  style={{
-                    width: '4ch',
-                    background: fg,
-                    paddingLeft: '0.5ch',
-                    color: bg,
-                  }}
-                >
-                  j k
+                <div style={{ display: 'flex' }}>
+                  <Keycap k={'j'} fg={fg} bg={bg} clickKey={clickKey} />
+                  <Keycap k={'k'} fg={fg} bg={bg} clickKey={clickKey} />
                 </div>
               ) : null}
             </div>

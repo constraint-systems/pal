@@ -41,6 +41,20 @@ export let fragment_shader = `precision mediump float;
       } else {
         hued = u_palette[0];
       }
+    } else if (color.r == color.g && color.g == color.b) {
+      if (lum >= 0.5) {
+        if (bg <= fg) {
+          hued = u_palette[0];
+        } else {
+          hued = u_palette[1];
+        }
+      } else {
+        if (bg <= fg) {
+          hued = u_palette[1];
+        } else {
+          hued = u_palette[0];
+        }
+      }
     } else {
       if (hsv[0] <= 0.0833) {
         hued = u_palette[2];
