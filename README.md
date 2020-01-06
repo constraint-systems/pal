@@ -12,7 +12,7 @@ Pal looks at each pixel of the image. It first looks at luminance. If the lumina
 
 ### Applying a theme
 
-To apply a theme Pal uses the palette categories from the base color values: red pixels are set to whatever is in that theme's red slot, etc. An alternative way to do it would be to recalculate the closest hue based on the theme's colors (this is how color palettes are usually applied). But Pal doesn't do that. Pal uses the calculations from the base colors and applies the theme on top of that. For black and white Pal use the background and foreground colors from the theme. It uses whichever one is darker for the black pixels (so dark themes use the background color for black while light themes use the foreground color).
+To apply a theme Pal uses the palette categories from the base color values: red pixels are set to whatever is in that theme's red slot, etc. An alternative way to do it would be to recalculate the closest hue based on the theme's colors (this is how color palettes are usually applied). But Pal doesn't do that. Pal uses the calculations from the base colors and applies the theme on top of that. For black and white Pal uses the background and foreground colors from the theme. It uses whichever one is darker for the black pixels (so dark themes use the background color for black while light themes use the foreground color).
 
 `shue` shifts the hue slots according to its value. The background and foreground colors remain the same.
 
