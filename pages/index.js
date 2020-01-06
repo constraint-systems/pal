@@ -36,6 +36,8 @@ let Keycap = ({ k, fg, bg, clickKey, inline = false }) => {
   )
 }
 
+console.log('keys used:', 'asdfhlow?x')
+
 const Home = ({ pick_serve }) => {
   let [pick, setPick] = useState(0)
   let [hue_shift, setHueShift] = useState(0)
@@ -599,6 +601,7 @@ const Home = ({ pick_serve }) => {
                 ></div>
                 {t.hues.map(k => (
                   <div
+                    key={k}
                     style={{ background: k, width: '2ch', height: '1.5rem' }}
                   ></div>
                 ))}
@@ -732,6 +735,7 @@ const Home = ({ pick_serve }) => {
         body {
           margin: 0;
           padding: 0;
+          overflow: hidden;
         }
         canvas {
           display: block;
