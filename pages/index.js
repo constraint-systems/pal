@@ -36,7 +36,7 @@ let Keycap = ({ k, fg, bg, clickKey, inline = false }) => {
   )
 }
 
-console.log('keys used:', 'asdfhlow?x')
+console.log('keys used:', 'asdfhlow?xjk')
 
 const Home = ({ pick_serve }) => {
   let [pick, setPick] = useState(0)
@@ -735,7 +735,6 @@ const Home = ({ pick_serve }) => {
         body {
           margin: 0;
           padding: 0;
-          overflow: hidden;
         }
         canvas {
           display: block;
