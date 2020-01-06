@@ -41,6 +41,7 @@ const Home = ({ pick_serve }) => {
   let [load, setLoad] = useState(false)
   let [lthresh, setLthresh] = useState(0.2)
   let [hthresh, setHthresh] = useState(0.8)
+  let [show_info, setShowInfo] = useState(true)
 
   function clickKey(key) {
     let km = keymap_ref.current
@@ -56,7 +57,7 @@ const Home = ({ pick_serve }) => {
     img.onload = () => {
       setLoad(true)
 
-      let w = window.innerWidth - 18 * 1.5
+      let w = window.innerWidth - 18 * 2
       let h = window.innerHeight - rlh
 
       let iw = img.width
@@ -294,6 +295,12 @@ const Home = ({ pick_serve }) => {
         )
       })
     }
+    if (key === 'x') {
+      setShowInfo(false)
+    }
+    if (key === '?') {
+      setShowInfo(prev => !prev)
+    }
 
     if (keymap['j']) {
       setPick(prevState => {
@@ -439,13 +446,9 @@ const Home = ({ pick_serve }) => {
             </div>
             <div style={{ display: 'flex' }}>
               <Keycap k={'?'} fg={fg} bg={bg} clickKey={clickKey} />
-              <div style={{ marginLeft: '0.5ch' }}>toggle help</div>
+              <div style={{ marginLeft: '0.5ch' }}>show info</div>
             </div>
           </div>
-        </div>
-
-        <div style={{ color: fg }}>
-          Pal let's you apply a terminal color scheme to an image.
         </div>
 
         <div
@@ -547,6 +550,12 @@ const Home = ({ pick_serve }) => {
               }}
             >
               <div style={{ width: '12ch', display: 'flex' }}>
+                <div
+                  style={{ background: t.bg, width: '2ch', height: '1.5rem' }}
+                ></div>
+                <div
+                  style={{ background: t.fg, width: '2ch', height: '1.5rem' }}
+                ></div>
                 {t.hues.map(k => (
                   <div
                     style={{ background: k, width: '2ch', height: '1.5rem' }}
@@ -574,6 +583,69 @@ const Home = ({ pick_serve }) => {
             </div>
           ))}
         </div>
+
+        {show_info ? (
+          <div
+            style={{
+              position: 'fixed',
+              zIndex: 4,
+              left: 0,
+              top: 0,
+              height: '100%',
+              width: '100%',
+              paddingLeft: '1ch',
+              paddingRight: '1ch',
+              paddingTop: rlh * 2,
+            }}
+          >
+            <div
+              style={{
+                background: bg,
+                color: fg,
+                border: `solid 1px ${fg}`,
+                borderTop: 'none',
+                maxWidth: '60ch',
+                margin: '0 auto',
+              }}
+            >
+              <div
+                style={{
+                  outline: `solid 1px ${fg}`,
+                  paddingLeft: '1ch',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div>Info</div>
+                <Keycap k={'x'} fg={fg} bg={bg} clickKey={clickKey} />
+              </div>
+              <div
+                style={{
+                  paddingLeft: '1ch',
+                  paddingRight: '1ch',
+                  paddingTop: rlh / 2,
+                  paddingBottom: rlh / 2,
+                }}
+              >
+                <div style={{ marginBottom: rlh }}>
+                  Pal let's you apply an eight-color terminal color palette to
+                  an image. Use the keyboard controls to choose a theme, set the
+                  thresholds, and cycle the hue.
+                </div>
+                <div>
+                  You can read more about how it works and view the code{' '}
+                  <a
+                    href="https://github.com/constraint-systems/pal"
+                    style={{ color: fg }}
+                  >
+                    on github
+                  </a>
+                  .
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </div>
 
       <style global jsx>{`
