@@ -10,9 +10,9 @@ let rlh = fs * lh
 
 let theme_names = themes.map(t => t.name)
 
-let Keycap = ({ k, fg, bg, clickKey }) => {
+let Keycap = ({ k, fg, bg, clickKey, inline = false }) => {
   return (
-    <div
+    <button
       style={{
         userSelect: 'none',
         MozUserSelect: 'none',
@@ -21,13 +21,18 @@ let Keycap = ({ k, fg, bg, clickKey }) => {
         paddingLeft: '0.5ch',
         paddingRight: '0.5ch',
         textDecoration: 'underline',
+        display: inline ? 'inline' : 'block',
+        font: 'inherir',
+        paddingBottom: 0,
+        paddingTop: 0,
+        border: 0,
       }}
       onClick={() => {
         clickKey(k)
       }}
     >
       {k}
-    </div>
+    </button>
   )
 }
 
@@ -397,12 +402,46 @@ const Home = ({ pick_serve }) => {
     keymap_ref.current[key] = false
   }
 
+  function onPaste(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    for (const item of e.clipboardData.items) {
+      if (item.type.indexOf('image') < 0) {
+        continue
+      }
+      let file = item.getAsFile()
+      let src = URL.createObjectURL(file)
+      initImage(src)
+    }
+  }
+
+  function onDrag(e) {
+    e.stopPropagation()
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'copy'
+  }
+
+  function onDrop(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    let file = e.dataTransfer.files[0]
+    let filename = file.path ? file.path : file.name ? file.name : ''
+    let src = URL.createObjectURL(file)
+    initImage(src)
+  }
+
   useEffect(() => {
     window.addEventListener('keydown', downHandler)
     window.addEventListener('keyup', upHandler)
+    window.addEventListener('paste', onPaste, false)
+    window.addEventListener('dragover', onDrag, false)
+    window.addEventListener('drop', onDrop, false)
     return () => {
       window.removeEventListener('keydown', downHandler)
       window.removeEventListener('keyup', upHandler)
+      window.removeEventListener('paste', onPaste)
+      window.removeEventListener('dragover', onDrag, false)
+      window.removeEventListener('drop', onDrop, false)
     }
   }, [lthresh, hthresh, pick])
 
@@ -545,11 +584,13 @@ const Home = ({ pick_serve }) => {
                 zIndex: i === 0 ? 2 : 1,
                 cursor: 'default',
               }}
-              onClick={() => {
-                selectTheme(t.name)
-              }}
             >
-              <div style={{ width: '12ch', display: 'flex' }}>
+              <div
+                style={{ width: '12ch', display: 'flex' }}
+                onClick={() => {
+                  selectTheme(t.name)
+                }}
+              >
                 <div
                   style={{ background: t.bg, width: '2ch', height: '1.5rem' }}
                 ></div>
@@ -569,6 +610,9 @@ const Home = ({ pick_serve }) => {
                     color: i === 0 && false ? t.bg : t.fg,
                     paddingLeft: '0.5ch',
                     paddingRight: '0.5ch',
+                  }}
+                  onClick={() => {
+                    selectTheme(t.name)
                   }}
                 >
                   {t.name}
@@ -597,6 +641,9 @@ const Home = ({ pick_serve }) => {
               paddingRight: '1ch',
               paddingTop: rlh * 2,
             }}
+            onClick={() => {
+              setShowInfo(false)
+            }}
           >
             <div
               style={{
@@ -606,6 +653,9 @@ const Home = ({ pick_serve }) => {
                 borderTop: 'none',
                 maxWidth: '60ch',
                 margin: '0 auto',
+              }}
+              onClick={e => {
+                e.stopPropagation()
               }}
             >
               <div
@@ -629,9 +679,21 @@ const Home = ({ pick_serve }) => {
               >
                 <div style={{ marginBottom: rlh }}>
                   Pal let's you apply an eight-color terminal color palette to
-                  an image. Use the keyboard controls to choose a theme, set the
-                  thresholds, and cycle the hue.
+                  an image. Use the keyboard controls to choose a theme, set
+                  thresholds, and cycle hues.
                 </div>
+                <div style={{ marginBottom: rlh }}>
+                  You can load your own image by pressing{' '}
+                  <Keycap
+                    k={'o'}
+                    fg={fg}
+                    bg={bg}
+                    clickKey={clickKey}
+                    inline={true}
+                  />
+                  , pasting, or dragging and dropping.
+                </div>
+
                 <div>
                   You can read more about how it works and view the code{' '}
                   <a
