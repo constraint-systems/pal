@@ -59,15 +59,15 @@ export let fragment_shader = `precision mediump float;
       if (hsv[0] <= 0.0833) {
         hued = u_palette[2];
       } else if (hsv[0] <= 0.25) {
-        hued = u_palette[3];
-      } else if (hsv[0] <= 0.4166) {
         hued = u_palette[4];
+      } else if (hsv[0] <= 0.4166) {
+        hued = u_palette[3];
       } else if (hsv[0] <= 0.5833) {
-        hued = u_palette[5];
-      } else if (hsv[0] <= 0.75) {
-        hued = u_palette[6];
-      } else if (hsv[0] <= 0.9166) {
         hued = u_palette[7];
+      } else if (hsv[0] <= 0.75) {
+        hued = u_palette[5];
+      } else if (hsv[0] <= 0.9166) {
+        hued = u_palette[6];
       } else {
         hued = u_palette[2];
       }
