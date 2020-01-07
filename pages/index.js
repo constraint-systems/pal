@@ -599,12 +599,16 @@ const Home = ({ pick_serve }) => {
                 <div
                   style={{ background: t.fg, width: '2ch', height: '1.5rem' }}
                 ></div>
-                {t.hues.map(k => (
-                  <div
-                    key={k}
-                    style={{ background: k, width: '2ch', height: '1.5rem' }}
-                  ></div>
-                ))}
+                {/* resorting hues */}
+                {[0, 2, 1, 5, 3, 4].map(i => {
+                  let k = t.hues[i]
+                  return (
+                    <div
+                      key={k}
+                      style={{ background: k, width: '2ch', height: '1.5rem' }}
+                    />
+                  )
+                })}
               </div>
               <div style={{ display: 'flex', flexGrow: 1 }}>
                 <div

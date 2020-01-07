@@ -8,7 +8,7 @@ https://pal.constraint.systems
 
 ### Applying the base colors
 
-Pal looks at each pixel of the image. It first looks at luminance. If the luminance value is lower than the `lothresh` threshold, the pixel is set to black. If the luminance value is higher than the `hithresh` threshold, the pixel is set to white. If it is between the thresholds, it uses a formula to calculate the hue. The pixel is then set to the closest hue (from red, green, yellow, blue, magenta and cyan). If the color has no hue (if its red, green, and blue values are equal) it is set to black or white based on a luminance threshold of 0.5.
+Pal looks at each pixel of the image. It first looks at luminance. If the luminance value is lower than the `lothresh` threshold, the pixel is set to black. If the luminance value is higher than the `hithresh` threshold, the pixel is set to white. If it is between the thresholds, it uses a formula to calculate the hue. The pixel is then set to the closest hue (from red, yellow, green, blue, magenta and cyan). If the color has no hue (if its red, green, and blue values are equal) it is set to black or white based on a luminance threshold of 0.5.
 
 ### Applying a theme
 
