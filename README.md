@@ -1,4 +1,8 @@
 # Pal
+ 
+<img
+src='https://raw.githubusercontent.com/constraint-systems/pal/master/public/pal.gif'
+width="600"/>
 
 Apply an eight-color terminal palette to an image. Use keyboard controls to choose a theme, set thresholds, and cycle hues.
 

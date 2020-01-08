@@ -8,7 +8,8 @@ class MyDocument extends Document {
 
   render() {
     let title = 'Pal'
-    let description = ''
+    let description =
+      'Apply eight-color palettes to any image. Use keyboard controls to choose a theme, set thresholds, and cycle hues.'
     return (
       <Html>
         <Head>
@@ -25,9 +26,9 @@ class MyDocument extends Document {
           <meta property="og:description" content={description} />
           <meta
             property="og:image"
-            content="https://bix.constraint.systems/bix-share.png"
+            content="https://bix.constraint.systems/pal.png"
           />
-          <meta property="og:url" content="https://bix.constraint.systems" />
+          <meta property="og:url" content="https://pal.constraint.systems" />
           <meta name="twitter:card" content="summary_large_image" />
         </Head>
         <body>
