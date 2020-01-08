@@ -26,7 +26,7 @@ class MyDocument extends Document {
           <meta property="og:description" content={description} />
           <meta
             property="og:image"
-            content="https://bix.constraint.systems/pal.png"
+            content="https://pal.constraint.systems/pal.png"
           />
           <meta property="og:url" content="https://pal.constraint.systems" />
           <meta name="twitter:card" content="summary_large_image" />
