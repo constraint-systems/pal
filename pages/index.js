@@ -14,17 +14,15 @@ let Keycap = ({ k, fg, bg, clickKey, inline = false }) => {
   return (
     <button
       style={{
-        userSelect: 'none',
-        MozUserSelect: 'none',
         background: fg,
         color: bg,
-        paddingLeft: '0.5ch',
-        paddingRight: '0.5ch',
+        width: '3ch',
+        textAlign: 'center',
         textDecoration: 'underline',
         display: inline ? 'inline' : 'block',
         font: 'inherir',
-        paddingBottom: 0,
-        paddingTop: 0,
+        padding: 0,
+        margin: 0,
         border: 0,
       }}
       onClick={() => {
